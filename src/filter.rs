@@ -2,6 +2,7 @@ use bio::data_structures::fmindex::{FMIndex, FMIndexable, BackwardSearchResult, 
 use bio::data_structures::bwt::{Occ};
 use needletail::{parse_fastx_file, Sequence};
 use std::fs::File;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::io::{BufReader, Write, BufWriter};
 use anyhow::Result;
@@ -48,14 +49,21 @@ fn build_output_path(
     let filename = path.file_name().unwrap().to_string_lossy();
     let stem = strip_compression_extension(&filename);
 
+    // Ensure output directory exists
+    let outpath = Path::new(outdir);
+    if let Err(e) = fs::create_dir_all(outpath) {
+        eprintln!("Failed to create output directory {}: {}", outdir, e);
+    }
+
     let output_filename = if output_format.is_empty() {
         format!("{}{}", prefix, filename)
     } else {
         format!("{}{}{}", prefix, stem, ensure_leading_dot(output_format))
     };
 
-    Path::new(outdir).join(output_filename)
+    outpath.join(output_filename)
 }
+
 
 fn infer_format_from_filename(path: &str) -> &str {
     let path = path.to_ascii_lowercase();

@@ -20,13 +20,33 @@ fn ensure_leading_dot(ext: &str) -> String {
     }
 }
 
+fn strip_compression_extension(filename: &str) -> String {
+    if filename.ends_with(".fastq.gz") {
+        filename.trim_end_matches(".fastq.gz").to_string()
+    } else if filename.ends_with(".fasta.gz") {
+        filename.trim_end_matches(".fasta.gz").to_string()
+    } else if filename.ends_with(".fa.gz") {
+        filename.trim_end_matches(".fa.gz").to_string()
+    } else if filename.ends_with(".fq.gz") {
+        filename.trim_end_matches(".fq.gz").to_string()
+    } else {
+        Path::new(filename)
+            .file_stem()
+            .unwrap()
+            .to_string_lossy()
+            .to_string() // ✅ own the string
+    }
+}
 
-
-fn build_output_path(input_path: &str, prefix: &str, output_format: &str) -> PathBuf {
+fn build_output_path(
+    input_path: &str,
+    prefix: &str,
+    output_format: &str,
+    outdir: &str,
+) -> PathBuf {
     let path = Path::new(input_path);
-    let parent = path.parent().unwrap_or_else(|| Path::new(""));
-    let stem = path.file_stem().unwrap().to_string_lossy();
     let filename = path.file_name().unwrap().to_string_lossy();
+    let stem = strip_compression_extension(&filename);
 
     let output_filename = if output_format.is_empty() {
         format!("{}{}", prefix, filename)
@@ -34,7 +54,7 @@ fn build_output_path(input_path: &str, prefix: &str, output_format: &str) -> Pat
         format!("{}{}{}", prefix, stem, ensure_leading_dot(output_format))
     };
 
-    parent.join(output_filename)
+    Path::new(outdir).join(output_filename)
 }
 
 fn infer_format_from_filename(path: &str) -> &str {
@@ -75,16 +95,28 @@ pub fn filter(args: &FilterArgs) -> Result<()> {
         }
     };
     
-    let matched_r1_path = build_output_path(&args.read1, &args.matched_prefix, format);
+    let matched_r1_path = build_output_path(
+        &args.read1, "matched_", format, &args.outdir);
     let matched_r2_path = args.read2.as_ref().map(|r2| {
-        build_output_path(r2, &args.matched_prefix, format)
+        build_output_path(r2, "matched_", format, &args.outdir)
     });
     
-    let filtered_r1_path = build_output_path(&args.read1, &args.filtered_prefix, format);
+    let filtered_r1_path = build_output_path(
+        &args.read1, "filtered_", format, &args.outdir);
     let filtered_r2_path = args.read2.as_ref().map(|r2| {
-        build_output_path(r2, &args.filtered_prefix, format)
+        build_output_path(r2, "filtered_", format, &args.outdir)
     });
 
+    // Write the output file names to the console
+    println!("Matched R1 output: {:?}", matched_r1_path);
+    if let Some(path) = &matched_r2_path {
+        println!("Matched R2 output: {:?}", path);
+    }
+    println!("Filtered R1 output: {:?}", filtered_r1_path);
+    if let Some(path) = &filtered_r2_path {
+        println!("Filtered R2 output: {:?}", path);
+    }
+    // Create writers for the output files
 
     let mut matched_r1 = create_writer(matched_r1_path.to_str().unwrap())?;
     let mut matched_r2 = if paired {

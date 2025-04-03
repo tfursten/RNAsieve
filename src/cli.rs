@@ -31,7 +31,7 @@ pub struct BuildArgs {
 #[derive(clap::Args)]
 pub struct FilterArgs {
     pub index: String,
-
+    pub outdir: String,
     /// Required R1 reads (fastq, fastq.gz, or fasta).
     #[arg(long, short = '1')]
     pub read1: String,
@@ -47,12 +47,6 @@ pub struct FilterArgs {
     /// Minimum number of seeds that must match the index for a read to be considered a hit.
     #[arg(long, short='c', default_value_t = 1)]
     pub cutoff: usize,
-    /// Prefix for the filtered output files (reads that did not have matches in index).
-    #[arg(long, default_value = "filtered_")]
-    pub filtered_prefix: String,
-    /// Prefix for the matched output files (reads that had matches in index.)
-    #[arg(long, default_value = "matched_")]
-    pub matched_prefix: String,
     /// Output format for the reads. Options: 'fastq', 'fasta', 'fastq.gz' [default: matches input format].
     /// Dummy quality scores added for fastq if not present in the input.
     #[arg(long)]
